@@ -1,14 +1,14 @@
-
 import React, { useState } from 'react';
 
-function LoginForm({ role }) {
+function SignupForm({ role }) {
   const [formData, setFormData] = useState({
     username: '',
-    
+    email: '',
     password: '',
-    confirmPassword: '',
     securityCode: '',
   });
+
+  const [message, setMessage] = useState('');
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -17,11 +17,6 @@ function LoginForm({ role }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    if (formData.password !== formData.confirmPassword) {
-      alert("Passwords don't match!");
-      return;
-    }
 
     try {
       const response = await fetch('http://localhost:8000/signup', {
@@ -41,9 +36,9 @@ function LoginForm({ role }) {
       const result = await response.json();
 
       if (!response.ok) throw new Error(result.detail || 'Signup failed');
-      alert(result.message);
+      setMessage(result.message || '✅ Signup successful!');
     } catch (error) {
-      alert(`❌ ${error.message}`);
+      setMessage(`❌ ${error.message}`);
     }
   };
 
@@ -55,37 +50,66 @@ function LoginForm({ role }) {
             color: white;
             opacity: 1;
           }
-
-          input:focus {
-            background-color: transparent;
-          }
         `}
       </style>
 
       <div style={styles.wrapper}>
         <form onSubmit={handleSubmit}>
-          <h1 style={styles.title}>{role === 'admin' ? 'Admin' : 'User'} Login</h1>
+          <h1 style={styles.title}>{role === 'admin' ? 'Admin' : 'User'} Sign Up</h1>
 
           <div style={styles.inputBox}>
-            <input type="text" name="username" placeholder="Username" value={formData.username} onChange={handleChange} required style={styles.input} />
+            <input
+              type="text"
+              name="username"
+              placeholder="Username"
+              value={formData.username}
+              onChange={handleChange}
+              required
+              style={styles.input}
+            />
           </div>
 
-          
           <div style={styles.inputBox}>
-            <input type="password" name="password" placeholder="Password" value={formData.password} onChange={handleChange} required style={styles.input} />
+            <input
+              type="email"
+              name="email"
+              placeholder="Email"
+              value={formData.email}
+              onChange={handleChange}
+              required
+              style={styles.input}
+            />
           </div>
 
           <div style={styles.inputBox}>
-            <input type="password" name="confirmPassword" placeholder="Confirm Password" value={formData.confirmPassword} onChange={handleChange} required style={styles.input} />
+            <input
+              type="password"
+              name="password"
+              placeholder="Password"
+              value={formData.password}
+              onChange={handleChange}
+              required
+              style={styles.input}
+            />
           </div>
 
           {role === 'admin' && (
             <div style={styles.inputBox}>
-              <input type="text" name="securityCode" placeholder="Admin Security Code" value={formData.securityCode} onChange={handleChange} required style={styles.input} />
+              <input
+                type="text"
+                name="securityCode"
+                placeholder="Admin Security Code"
+                value={formData.securityCode}
+                onChange={handleChange}
+                required
+                style={styles.input}
+              />
             </div>
           )}
 
-          <button type="submit" style={styles.button}>Login</button>
+          <button type="submit" style={styles.button}>Sign Up</button>
+
+          {message && <p style={styles.message}>{message}</p>}
         </form>
       </div>
     </div>
@@ -98,7 +122,8 @@ const styles = {
     justifyContent: 'center',
     alignItems: 'center',
     minHeight: '100vh',
-    backgroundImage: 'url(https://img.playbook.com/IZSaaisbuPYRUSQYBZckzA61Px-1dJx2_5pGRp3N4dk/Z3M6Ly9wbGF5Ym9v/ay1hc3NldHMtcHVi/bGljLzRkZmUwYjQ2/LWRhNjAtNDQ2Yy1h/Y2UxLWM0ZTZkMGI3/NTdlMA)',
+    backgroundImage:
+      'url(https://img.playbook.com/IZSaaisbuPYRUSQYBZckzA61Px-1dJx2_5pGRp3N4dk/Z3M6Ly9wbGF5Ym9v/ay1hc3NldHMtcHVi/bGljLzRkZmUwYjQ2/LWRhNjAtNDQ2Yy1h/Y2UxLWM0ZTZkMGI3/NTdlMA)',
     backgroundSize: 'cover',
     backgroundPosition: 'center',
     fontFamily: "'Poppins', sans-serif",
@@ -126,12 +151,11 @@ const styles = {
     width: '100%',
     padding: '12px 15px',
     fontSize: '16px',
-    backgroundColor: 'transparent',
+    background: 'transparent',
     border: '2px solid rgba(255, 255, 255, .2)',
     borderRadius: '40px',
     color: '#fff',
     outline: 'none',
-    caretColor: '#fff',
   },
   button: {
     width: '100%',
@@ -145,6 +169,12 @@ const styles = {
     cursor: 'pointer',
     marginTop: '10px',
   },
+  message: {
+    textAlign: 'center',
+    marginTop: '15px',
+    fontWeight: 'bold',
+    color: '#ffeb3b',
+  },
 };
 
-export default LoginForm;
+export default SignupForm;

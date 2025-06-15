@@ -54,6 +54,15 @@ function SignupForm({ role }) {
             color: white;
             opacity: 1;
           }
+
+          input:-webkit-autofill,
+          input:-webkit-autofill:hover,
+          input:-webkit-autofill:focus,
+          input:-webkit-autofill:active {
+            -webkit-box-shadow: 0 0 0 30px transparent inset !important;
+            -webkit-text-fill-color: white !important;
+            transition: background-color 5000s ease-in-out 0s;
+          }
         `}
       </style>
 
@@ -70,6 +79,7 @@ function SignupForm({ role }) {
               onChange={handleChange}
               required
               style={styles.input}
+              autoComplete="username"
             />
           </div>
 
@@ -82,6 +92,7 @@ function SignupForm({ role }) {
               onChange={handleChange}
               required
               style={styles.input}
+              autoComplete="email"
             />
           </div>
 
@@ -94,6 +105,7 @@ function SignupForm({ role }) {
               onChange={handleChange}
               required
               style={styles.input}
+              autoComplete="new-password"
             />
           </div>
 
@@ -106,6 +118,7 @@ function SignupForm({ role }) {
               onChange={handleChange}
               required
               style={styles.input}
+              autoComplete="new-password"
             />
           </div>
 
@@ -119,6 +132,7 @@ function SignupForm({ role }) {
                 onChange={handleChange}
                 required
                 style={styles.input}
+                autoComplete="off"
               />
             </div>
           )}
@@ -172,6 +186,7 @@ const styles = {
     borderRadius: '40px',
     color: '#fff',
     outline: 'none',
+    caretColor: '#fff',
   },
   button: {
     width: '100%',
