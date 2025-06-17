@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom/client';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import RoleSelector from './RoleSelector';
 import LoginForm from './LoginForm';
-import SignupForm from './SignupForm'; // Create this later or mock it
+import SignupForm from './SignupForm';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

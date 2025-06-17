@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 
-function SignupForm({ role }) {
+function LoginForm({ role }) {
   const [formData, setFormData] = useState({
-    username: '',
     email: '',
     password: '',
     securityCode: '',
@@ -19,13 +18,12 @@ function SignupForm({ role }) {
     e.preventDefault();
 
     try {
-      const response = await fetch('http://localhost:8000/signup', {
+      const response = await fetch('http://localhost:8000/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          username: formData.username,
           email: formData.email,
           password: formData.password,
           role: role,
@@ -35,8 +33,8 @@ function SignupForm({ role }) {
 
       const result = await response.json();
 
-      if (!response.ok) throw new Error(result.detail || 'Signup failed');
-      setMessage(result.message || '✅ Signup successful!');
+      if (!response.ok) throw new Error(result.detail || 'Login failed');
+      setMessage(result.message || '✅ Login successful!');
     } catch (error) {
       setMessage(`❌ ${error.message}`);
     }
@@ -55,19 +53,7 @@ function SignupForm({ role }) {
 
       <div style={styles.wrapper}>
         <form onSubmit={handleSubmit}>
-          <h1 style={styles.title}>{role === 'admin' ? 'Admin' : 'User'} Sign Up</h1>
-
-          <div style={styles.inputBox}>
-            <input
-              type="text"
-              name="username"
-              placeholder="Username"
-              value={formData.username}
-              onChange={handleChange}
-              required
-              style={styles.input}
-            />
-          </div>
+          <h1 style={styles.title}>{role === 'admin' ? 'Admin' : 'User'} Login</h1>
 
           <div style={styles.inputBox}>
             <input
@@ -96,7 +82,7 @@ function SignupForm({ role }) {
           {role === 'admin' && (
             <div style={styles.inputBox}>
               <input
-                type="text"
+                type="password"
                 name="securityCode"
                 placeholder="Admin Security Code"
                 value={formData.securityCode}
@@ -107,7 +93,7 @@ function SignupForm({ role }) {
             </div>
           )}
 
-          <button type="submit" style={styles.button}>Sign Up</button>
+          <button type="submit" style={styles.button}>Login</button>
 
           {message && <p style={styles.message}>{message}</p>}
         </form>
@@ -177,4 +163,4 @@ const styles = {
   },
 };
 
-export default SignupForm;
+export default LoginForm;

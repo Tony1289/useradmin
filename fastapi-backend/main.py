@@ -80,7 +80,7 @@ def signup(data: SignupData):
 
     try:
         cursor.execute(
-            "INSERT INTO users (username, email, password, role) VALUES (%s, %s, %s, %s)",
+            "INSERT INTO newusers (username, email, password, role) VALUES (%s, %s, %s, %s)",
             (data.username, data.email, hashed_pw.decode(), data.role)
         )
         db.commit()
@@ -95,7 +95,7 @@ def login(data: LoginData):
     db = get_db()
     cursor = db.cursor(dictionary=True)
 
-    cursor.execute("SELECT * FROM users WHERE email = %s", (data.email,))
+    cursor.execute("SELECT * FROM newusers WHERE email = %s", (data.email,))
     user = cursor.fetchone()
     db.close()
 
