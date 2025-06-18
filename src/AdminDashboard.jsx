@@ -18,10 +18,21 @@ function AdminDashboard() {
       });
   }, [navigate]);
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    navigate('/admin/login');
+  const handleLogout = async () => {
+    const adminEmail = localStorage.getItem('adminEmail');
+    try {
+      await axios.post('http://localhost:8000/logout', {
+        email: adminEmail,
+      });
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      localStorage.removeItem('token');
+      localStorage.removeItem('adminEmail');
+      navigate('/');
+    }
   };
+  
 
   return (
     <div style={styles.pageWrapper}>

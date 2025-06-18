@@ -14,10 +14,23 @@ function UserDashboard() {
     }
   }, [navigate]);
 
-  const handleLogout = () => {
-    localStorage.removeItem('userEmail');
-    navigate('/user/login');
+  const handleLogout = async () => {
+    try {
+      await fetch('http://localhost:8000/logout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      localStorage.removeItem('userEmail');
+      navigate('/');
+    }
   };
+  
 
   return (
     <div style={styles.body}>
