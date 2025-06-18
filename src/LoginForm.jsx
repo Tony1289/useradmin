@@ -110,7 +110,7 @@ function LoginForm({ role }) {
           {role === 'admin' && (
             <div style={styles.inputBox}>
               <input
-                type="text"
+                type="password"
                 name="securityCode"
                 placeholder="Security Code"
                 required

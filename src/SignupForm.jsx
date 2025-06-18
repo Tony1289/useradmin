@@ -125,7 +125,7 @@ function SignupForm({ role }) {
           {role === 'admin' && (
             <div style={styles.inputBox}>
               <input
-                type="text"
+                type="password"
                 name="securityCode"
                 placeholder="Admin Security Code"
                 value={formData.securityCode}
