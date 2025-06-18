@@ -59,38 +59,67 @@ function LoginForm({ role }) {
 
   return (
     <div style={styles.body}>
+      <style>
+        {`
+          input::placeholder {
+            color: white;
+            opacity: 1;
+          }
+
+          input:-webkit-autofill,
+          input:-webkit-autofill:hover,
+          input:-webkit-autofill:focus,
+          input:-webkit-autofill:active {
+            -webkit-box-shadow: 0 0 0 30px transparent inset !important;
+            -webkit-text-fill-color: white !important;
+            transition: background-color 5000s ease-in-out 0s;
+          }
+        `}
+      </style>
+
       <div style={styles.wrapper}>
         <form onSubmit={handleSubmit}>
           <h1 style={styles.title}>{role === 'admin' ? 'Admin' : 'User'} Login</h1>
 
-          <input
-            type="email"
-            name="email"
-            placeholder="Email"
-            required
-            value={formData.email}
-            onChange={handleChange}
-            style={styles.input}
-          />
-          <input
-            type="password"
-            name="password"
-            placeholder="Password"
-            required
-            value={formData.password}
-            onChange={handleChange}
-            style={styles.input}
-          />
-          {role === 'admin' && (
+          <div style={styles.inputBox}>
             <input
-              type="password"
-              name="securityCode"
-              placeholder="Security Code"
+              type="email"
+              name="email"
+              placeholder="Email"
               required
-              value={formData.securityCode}
+              value={formData.email}
               onChange={handleChange}
               style={styles.input}
+              autoComplete="email"
             />
+          </div>
+
+          <div style={styles.inputBox}>
+            <input
+              type="password"
+              name="password"
+              placeholder="Password"
+              required
+              value={formData.password}
+              onChange={handleChange}
+              style={styles.input}
+              autoComplete="current-password"
+            />
+          </div>
+
+          {role === 'admin' && (
+            <div style={styles.inputBox}>
+              <input
+                type="text"
+                name="securityCode"
+                placeholder="Security Code"
+                required
+                value={formData.securityCode}
+                onChange={handleChange}
+                style={styles.input}
+                autoComplete="off"
+              />
+            </div>
           )}
 
           <button type="submit" style={styles.button}>Login</button>
@@ -125,30 +154,35 @@ const styles = {
     padding: '30px 40px',
   },
   title: {
-    fontSize: '36px',
+    fontSize: '28px',
     textAlign: 'center',
+    marginBottom: '20px',
+  },
+  inputBox: {
+    width: '100%',
+    margin: '15px 0',
   },
   input: {
     width: '100%',
-    height: '50px',
+    padding: '12px 15px',
+    fontSize: '16px',
     background: 'transparent',
-    border: '2px solid rgba(255,255,255,.2)',
+    border: '2px solid rgba(255, 255, 255, .2)',
     borderRadius: '40px',
-    padding: '0 20px',
-    margin: '10px 0',
     color: '#fff',
     outline: 'none',
+    caretColor: '#fff',
   },
   button: {
     width: '100%',
-    height: '50px',
+    padding: '12px',
     background: '#fff',
     border: 'none',
     borderRadius: '40px',
-    cursor: 'pointer',
-    fontSize: '16px',
-    fontWeight: '600',
     color: '#333',
+    fontSize: '16px',
+    fontWeight: 'bold',
+    cursor: 'pointer',
     marginTop: '10px',
   },
   message: {
