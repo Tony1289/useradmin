@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 function LoginForm({ role }) {
   const [formData, setFormData] = useState({
@@ -8,6 +9,7 @@ function LoginForm({ role }) {
   });
 
   const [message, setMessage] = useState('');
+  const navigate = useNavigate();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -16,81 +18,79 @@ function LoginForm({ role }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setMessage('');
+
+    const payload = {
+      email: formData.email,
+      password: formData.password,
+      role: role,
+    };
+
+    if (role === 'admin') {
+      payload.security_code = formData.securityCode;
+    }
 
     try {
       const response = await fetch('http://localhost:8000/login', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: formData.email,
-          password: formData.password,
-          role: role,
-          security_code: role === 'admin' ? formData.securityCode : null,
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
       });
 
       const result = await response.json();
 
-      if (!response.ok) throw new Error(result.detail || 'Login failed');
-      setMessage(result.message || '✅ Login successful!');
+      if (!response.ok) {
+        throw new Error(result.detail || 'Login failed');
+      }
+
+      setMessage(result.message);
+
+      if (result.role === 'admin') {
+        localStorage.setItem('adminEmail', formData.email);
+        navigate('/admin/dashboard');
+      } else {
+        localStorage.setItem('userEmail', formData.email);
+        navigate('/user/dashboard');
+      }
     } catch (error) {
-      setMessage(`❌ ${error.message}`);
+      setMessage(error.message);
     }
   };
 
   return (
     <div style={styles.body}>
-      <style>
-        {`
-          input::placeholder {
-            color: white;
-            opacity: 1;
-          }
-        `}
-      </style>
-
       <div style={styles.wrapper}>
         <form onSubmit={handleSubmit}>
           <h1 style={styles.title}>{role === 'admin' ? 'Admin' : 'User'} Login</h1>
 
-          <div style={styles.inputBox}>
-            <input
-              type="email"
-              name="email"
-              placeholder="Email"
-              value={formData.email}
-              onChange={handleChange}
-              required
-              style={styles.input}
-            />
-          </div>
-
-          <div style={styles.inputBox}>
+          <input
+            type="email"
+            name="email"
+            placeholder="Email"
+            required
+            value={formData.email}
+            onChange={handleChange}
+            style={styles.input}
+          />
+          <input
+            type="password"
+            name="password"
+            placeholder="Password"
+            required
+            value={formData.password}
+            onChange={handleChange}
+            style={styles.input}
+          />
+          {role === 'admin' && (
             <input
               type="password"
-              name="password"
-              placeholder="Password"
-              value={formData.password}
-              onChange={handleChange}
+              name="securityCode"
+              placeholder="Security Code"
               required
+              value={formData.securityCode}
+              onChange={handleChange}
               style={styles.input}
             />
-          </div>
-
-          {role === 'admin' && (
-            <div style={styles.inputBox}>
-              <input
-                type="password"
-                name="securityCode"
-                placeholder="Admin Security Code"
-                value={formData.securityCode}
-                onChange={handleChange}
-                required
-                style={styles.input}
-              />
-            </div>
           )}
 
           <button type="submit" style={styles.button}>Login</button>
@@ -125,41 +125,37 @@ const styles = {
     padding: '30px 40px',
   },
   title: {
-    fontSize: '28px',
+    fontSize: '36px',
     textAlign: 'center',
-    marginBottom: '20px',
-  },
-  inputBox: {
-    width: '100%',
-    margin: '15px 0',
   },
   input: {
     width: '100%',
-    padding: '12px 15px',
-    fontSize: '16px',
+    height: '50px',
     background: 'transparent',
-    border: '2px solid rgba(255, 255, 255, .2)',
+    border: '2px solid rgba(255,255,255,.2)',
     borderRadius: '40px',
+    padding: '0 20px',
+    margin: '10px 0',
     color: '#fff',
     outline: 'none',
   },
   button: {
     width: '100%',
-    padding: '12px',
+    height: '50px',
     background: '#fff',
     border: 'none',
     borderRadius: '40px',
-    color: '#333',
-    fontSize: '16px',
-    fontWeight: 'bold',
     cursor: 'pointer',
+    fontSize: '16px',
+    fontWeight: '600',
+    color: '#333',
     marginTop: '10px',
   },
   message: {
+    marginTop: '10px',
     textAlign: 'center',
-    marginTop: '15px',
+    color: '#ffcccc',
     fontWeight: 'bold',
-    color: '#ffeb3b',
   },
 };
 

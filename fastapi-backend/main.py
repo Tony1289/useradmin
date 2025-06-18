@@ -1,31 +1,33 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, EmailStr
 from fastapi.middleware.cors import CORSMiddleware
-import mysql.connector
+from datetime import datetime
 from dotenv import load_dotenv
-import os
+import mysql.connector
 import bcrypt
+import os
 
-# Load .env variables
+# Load environment variables
 load_dotenv()
 
 DB_HOST = os.getenv("DB_HOST")
 DB_USER = os.getenv("DB_USER")
 DB_PASSWORD = os.getenv("DB_PASSWORD")
 DB_NAME = os.getenv("DB_NAME")
-ADMIN_CODE_HASH = os.getenv("ADMIN_CODE_HASH")
+ADMIN_CODE_HASH = os.getenv("ADMIN_CODE_HASH")  # hashed using bcrypt
 
-# App instance
 app = FastAPI()
+
+# Allow CORS (for frontend interaction)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # or ["http://localhost:3000"] for specific frontend
+    allow_origins=["*"],  # For dev only, restrict in production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Models
+# Pydantic Models
 class SignupData(BaseModel):
     username: str
     email: EmailStr
@@ -36,8 +38,13 @@ class SignupData(BaseModel):
 class LoginData(BaseModel):
     email: EmailStr
     password: str
+    role: str
+    security_code: str | None = None
 
-# Database connection function
+class LogoutData(BaseModel):
+    email: EmailStr
+
+# DB connection helper
 def get_db():
     return mysql.connector.connect(
         host=DB_HOST,
@@ -46,47 +53,32 @@ def get_db():
         database=DB_NAME
     )
 
-# Create users table (run once)
-@app.on_event("startup")
-def create_table():
-    db = get_db()
-    cursor = db.cursor()
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS newusers (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            username VARCHAR(100),
-            email VARCHAR(100) UNIQUE,
-            password VARCHAR(255),
-            role ENUM('user', 'admin'),
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
-    """)
-    db.commit()
-    db.close()
+# ------------------- API ROUTES -------------------
 
 @app.post("/signup")
 def signup(data: SignupData):
     db = get_db()
     cursor = db.cursor()
 
-    # Admin validation
     if data.role == "admin":
-        if not data.security_code:
-            raise HTTPException(status_code=400, detail="Security code is required for admin.")
-        if not bcrypt.checkpw(data.security_code.encode(), ADMIN_CODE_HASH.encode()):
+        if not data.security_code or not bcrypt.checkpw(data.security_code.encode(), ADMIN_CODE_HASH.encode()):
             raise HTTPException(status_code=403, detail="Invalid admin security code.")
 
-    hashed_pw = bcrypt.hashpw(data.password.encode(), bcrypt.gensalt())
+    hashed_pw = bcrypt.hashpw(data.password.encode(), bcrypt.gensalt()).decode()
+    hashed_email = bcrypt.hashpw(data.email.encode(), bcrypt.gensalt()).decode()
 
     try:
         cursor.execute(
-            "INSERT INTO newusers (username, email, password, role) VALUES (%s, %s, %s, %s)",
-            (data.username, data.email, hashed_pw.decode(), data.role)
+            """
+            INSERT INTO newusers (username, hashed_email, hashed_password, login_time, logout_time)
+            VALUES (%s, %s, %s, NULL, NULL)
+            """,
+            (data.username, hashed_email, hashed_pw)
         )
         db.commit()
         return {"message": f"{data.role.capitalize()} registered successfully!"}
     except mysql.connector.IntegrityError:
-        raise HTTPException(status_code=409, detail="Email already exists.")
+        raise HTTPException(status_code=409, detail="User already exists.")
     finally:
         db.close()
 
@@ -95,10 +87,71 @@ def login(data: LoginData):
     db = get_db()
     cursor = db.cursor(dictionary=True)
 
-    cursor.execute("SELECT * FROM newusers WHERE email = %s", (data.email,))
-    user = cursor.fetchone()
+    # Validate by comparing email hash
+    cursor.execute("SELECT * FROM newusers")
+    all_users = cursor.fetchall()
+
+    matched_user = None
+    for user in all_users:
+        if bcrypt.checkpw(data.email.encode(), user["hashed_email"].encode()):
+            matched_user = user
+            break
+
+    if not matched_user or not bcrypt.checkpw(data.password.encode(), matched_user["hashed_password"].encode()):
+        db.close()
+        raise HTTPException(status_code=401, detail="Invalid email or password.")
+
+    if data.role == "admin":
+        if not data.security_code or not bcrypt.checkpw(data.security_code.encode(), ADMIN_CODE_HASH.encode()):
+            db.close()
+            raise HTTPException(status_code=403, detail="Invalid admin security code.")
+
+    # Log to loginlogs
+    hashed_email = bcrypt.hashpw(data.email.encode(), bcrypt.gensalt()).decode()
+    hashed_pw = bcrypt.hashpw(data.password.encode(), bcrypt.gensalt()).decode()
+    login_time = datetime.now()
+
+    cursor.execute(
+        """
+        INSERT INTO loginlogs (email, username, hashed_email, hashed_password, login_time)
+        VALUES (%s, %s, %s, %s, %s)
+        """,
+        (data.email, matched_user["username"], hashed_email, hashed_pw, login_time)
+    )
+    db.commit()
     db.close()
 
-    if user and bcrypt.checkpw(data.password.encode(), user["password"].encode()):
-        return {"message": f"Welcome back, {user['username']}!", "role": user["role"]}
-    raise HTTPException(status_code=401, detail="Invalid email or password.")
+    return {"message": f"Welcome back, {matched_user['username']}!", "role": data.role}
+
+@app.post("/logout")
+def logout(data: LogoutData):
+    db = get_db()
+    cursor = db.cursor()
+
+    # Update latest NULL logout_time
+    cursor.execute(
+        """
+        UPDATE loginlogs
+        SET logout_time = %s
+        WHERE email = %s AND logout_time IS NULL
+        ORDER BY login_time DESC
+        LIMIT 1
+        """,
+        (datetime.now(), data.email)
+    )
+    db.commit()
+    db.close()
+
+    return {"message": "Logout time recorded successfully."}
+
+@app.get("/admin/users")
+def get_users():
+    db = get_db()
+    cursor = db.cursor(dictionary=True)
+
+    cursor.execute(
+        "SELECT username, hashed_email, hashed_password, login_time, logout_time FROM loginlogs"
+    )
+    logs = cursor.fetchall()
+    db.close()
+    return {"users": logs}
