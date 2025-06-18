@@ -1,3 +1,4 @@
+# --- FastAPI Backend (main.py) ---
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, EmailStr
 from fastapi.middleware.cors import CORSMiddleware
@@ -18,16 +19,16 @@ ADMIN_CODE_HASH = os.getenv("ADMIN_CODE_HASH")  # hashed using bcrypt
 
 app = FastAPI()
 
-# Allow CORS
+# Allow CORS (for frontend interaction)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # For development, restrict in production
+    allow_origins=["*"],  # For dev only, restrict in production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# ----------- Pydantic Models -----------
+# Pydantic Models
 class SignupData(BaseModel):
     username: str
     email: EmailStr
@@ -44,55 +45,14 @@ class LoginData(BaseModel):
 class LogoutData(BaseModel):
     email: EmailStr
 
-
-# ----------- DB Connection -----------
+# DB connection helper
 def get_db():
-    conn = mysql.connector.connect(
+    return mysql.connector.connect(
         host=DB_HOST,
         user=DB_USER,
         password=DB_PASSWORD,
         database=DB_NAME
     )
-    ensure_tables_exist(conn)
-    return conn
-
-
-# ----------- Auto-create tables and columns if missing -----------
-def ensure_tables_exist(conn):
-    cursor = conn.cursor()
-
-    # Create newusers table if it doesn't exist
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS newusers (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            username VARCHAR(100),
-            hashed_email TEXT,
-            hashed_password TEXT,
-            role VARCHAR(20),
-            login_time DATETIME,
-            logout_time DATETIME
-        )
-    """)
-
-    # Create loginlogs table if it doesn't exist
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS loginlogs (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            email VARCHAR(255),
-            username VARCHAR(100),
-            hashed_email TEXT,
-            hashed_password TEXT,
-            role VARCHAR(20),
-            login_time DATETIME,
-            logout_time DATETIME
-        )
-    """)
-
-    conn.commit()
-    cursor.close()
-
-
-# ----------- API ROUTES -----------
 
 @app.post("/signup")
 def signup(data: SignupData):
@@ -109,8 +69,8 @@ def signup(data: SignupData):
     try:
         cursor.execute(
             """
-            INSERT INTO newusers (username, hashed_email, hashed_password, role, login_time, logout_time)
-            VALUES (%s, %s, %s, %s, NULL, NULL)
+            INSERT INTO newusers (username, hashed_email, hashed_password, login_time, logout_time, role)
+            VALUES (%s, %s, %s, NULL, NULL, %s)
             """,
             (data.username, hashed_email, hashed_pw, data.role)
         )
@@ -121,13 +81,11 @@ def signup(data: SignupData):
     finally:
         db.close()
 
-
 @app.post("/login")
 def login(data: LoginData):
     db = get_db()
     cursor = db.cursor(dictionary=True)
 
-    # Validate user
     cursor.execute("SELECT * FROM newusers")
     all_users = cursor.fetchall()
 
@@ -146,24 +104,21 @@ def login(data: LoginData):
             db.close()
             raise HTTPException(status_code=403, detail="Invalid admin security code.")
 
-    # Log to loginlogs
+    login_time = datetime.now()
     hashed_email = bcrypt.hashpw(data.email.encode(), bcrypt.gensalt()).decode()
     hashed_pw = bcrypt.hashpw(data.password.encode(), bcrypt.gensalt()).decode()
-    login_time = datetime.now()
 
-    cursor = db.cursor()
     cursor.execute(
         """
-        INSERT INTO loginlogs (email, username, hashed_email, hashed_password, role, login_time)
+        INSERT INTO loginlogs (email, username, hashed_email, hashed_password, login_time, role)
         VALUES (%s, %s, %s, %s, %s, %s)
         """,
-        (data.email, matched_user["username"], hashed_email, hashed_pw, data.role, login_time)
+        (data.email, matched_user["username"], hashed_email, hashed_pw, login_time, data.role)
     )
     db.commit()
     db.close()
 
     return {"message": f"Welcome back, {matched_user['username']}!", "role": data.role}
-
 
 @app.post("/logout")
 def logout(data: LogoutData):
@@ -182,19 +137,20 @@ def logout(data: LogoutData):
     )
     db.commit()
     db.close()
-    return {"message": "Logout time recorded successfully."}
 
+    return {"message": "Logout time recorded successfully."}
 
 @app.get("/admin/users")
 def get_users():
     db = get_db()
     cursor = db.cursor(dictionary=True)
-
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT username, hashed_email, hashed_password, login_time, logout_time
         FROM loginlogs
         WHERE role = 'user'
-    """)
+        """
+    )
     logs = cursor.fetchall()
     db.close()
     return {"users": logs}
